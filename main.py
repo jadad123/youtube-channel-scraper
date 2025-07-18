@@ -63,7 +63,11 @@ async def get_youtube_channel_urls(query: str, num_channels: int = 100):
                     await asyncio.sleep(2) # Give time for content to load
                     
                     # Try to find channel links on the homepage/trending
-                    channel_elements = await page.query_selector_all("a[href*=\"/channel/\"], a[href*=\"/@\"]")
+                    await page.wait_for_selector("ytd-channel-renderer, ytd-grid-channel-renderer, ytd-video-renderer", timeout=10000) # Wait for channel elements to appear
+                    channel_elements = await page.query_selector_all("ytd-channel-renderer a[href*=\"/channel/\"], ytd-channel-renderer a[href*=\"/@\"]")
+                    if not channel_elements:
+                        # Fallback for video results that might contain channel links
+                        channel_elements = await page.query_selector_all("ytd-video-renderer a[href*=\"/channel/\"], ytd-video-renderer a[href*=\"/@\"]")
                     print(f"Found {len(channel_elements)} potential channel elements on random page.")
                     for element in channel_elements:
                         href = await element.get_attribute("href")
@@ -92,7 +96,11 @@ async def get_youtube_channel_urls(query: str, num_channels: int = 100):
                 while len(urls) < num_channels:
                     print(f"Collected {len(urls)} channels. Scrolling for more...")
                     # Find channel links on the current page
-                    channel_elements = await page.query_selector_all("a[href*=\"/channel/\"], a[href*=\"/@\"]")
+                    await page.wait_for_selector("ytd-channel-renderer, ytd-grid-channel-renderer, ytd-video-renderer", timeout=10000) # Wait for channel elements to appear
+                    channel_elements = await page.query_selector_all("ytd-channel-renderer a[href*=\"/channel/\"], ytd-channel-renderer a[href*=\"/@\"]")
+                    if not channel_elements:
+                        # Fallback for video results that might contain channel links
+                        channel_elements = await page.query_selector_all("ytd-video-renderer a[href*=\"/channel/\"], ytd-video-renderer a[href*=\"/@\"]")
                     print(f"Found {len(channel_elements)} potential channel elements on search page.")
                     for element in channel_elements:
                         href = await element.get_attribute("href")
