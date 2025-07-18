@@ -50,8 +50,11 @@ async def get_youtube_channel_urls(query: str, num_channels: int = 1000):
             if query == "random":
                 # For random, we'll just browse YouTube's homepage or trending
                 print("Navigating to YouTube homepage for random channels...")
-                await page.goto("https://www.youtube.com/", wait_until="networkidle", timeout=60000) # 60 sec timeout
+                await page.goto("https://www.youtube.com/", wait_until="domcontentloaded", timeout=60000) # 60 sec timeout
+                await asyncio.sleep(5) # Give extra time for dynamic content to load
                 print("Page loaded. Attempting to scroll and find channels.")
+                print("Page HTML content (random):")
+                print(await page.content())
                 
                 # Scroll down multiple times to load more content and find diverse channels
                 for i in range(5): # Reduced scrolls for faster testing
@@ -79,8 +82,11 @@ async def get_youtube_channel_urls(query: str, num_channels: int = 1000):
             else:
                 search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}&sp=EgIQAg%253D%253D" # Filter for channels
                 print(f"Navigating to search results: {search_url}")
-                await page.goto(search_url, wait_until="networkidle", timeout=60000) # 60 sec timeout
+                await page.goto(search_url, wait_until="domcontentloaded", timeout=60000) # 60 sec timeout
+                await asyncio.sleep(5) # Give extra time for dynamic content to load
                 print("Search results page loaded.")
+                print("Page HTML content (search):")
+                print(await page.content())
 
                 # Scroll down to load more channels
                 while len(urls) < num_channels:
