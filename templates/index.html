@@ -22,6 +22,7 @@
             <input type="text" id="search-query" placeholder="Enter search query (e.g., 'python tutorials')">
             <button onclick="startScrape('query')">Start Search</button>
             <button onclick="startScrape('random')">Start Random</button>
+            <button onclick="stopScrape()" style="background-color: #f44336; color: white;">Stop Current Scrape</button>
         </div>
 
         <div style="margin-top: 20px;">
@@ -109,6 +110,24 @@
                 });
             } catch (error) {
                 fileListElement.innerHTML = `<li>Error loading files: ${error.message}</li>`;
+            }
+        }
+
+        async function stopScrape() {
+            const statusElement = document.getElementById('current-status');
+            statusElement.textContent = 'Sending stop request...';
+            try {
+                const response = await fetch('/stop-scrape', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    statusElement.textContent = data.message;
+                } else {
+                    statusElement.textContent = `Error: ${data.detail || data.message}`;
+                }
+            } catch (error) {
+                statusElement.textContent = `Network error: ${error.message}`;
             }
         }
 
