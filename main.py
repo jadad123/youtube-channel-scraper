@@ -185,13 +185,16 @@ async def read_root(request: Request):
 
 @app.post("/scrape")
 async def start_scrape(scrape_request: ScrapeRequest, background_tasks: BackgroundTasks):
+    print(f"Received scrape request for query: {scrape_request.query}")
     job_id = str(uuid.uuid4())
     scrape_jobs[job_id] = {"status": "queued", "query": scrape_request.query}
     background_tasks.add_task(perform_scrape_task, job_id, scrape_request.query)
+    print(f"Queued scrape job {job_id} for query: {scrape_request.query}")
     return {"message": f"Scraping job started for '{scrape_request.query}'. Job ID: {job_id}", "job_id": job_id}
 
 @app.post("/upload-and-scrape")
 async def upload_and_scrape(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    print(f"Received file upload for scraping. File: {file.filename}")
     content = await file.read()
     search_terms = content.decode("utf-8").splitlines()
     search_terms = [term.strip() for term in search_terms if term.strip()]
@@ -199,10 +202,12 @@ async def upload_and_scrape(background_tasks: BackgroundTasks, file: UploadFile 
     if not search_terms:
         raise HTTPException(status_code=400, detail="File is empty or contains no valid search terms.")
 
+    print(f"Processing {len(search_terms)} search terms from file.")
     for term in search_terms:
         job_id = str(uuid.uuid4())
         scrape_jobs[job_id] = {"status": "queued", "query": term}
         background_tasks.add_task(perform_scrape_task, job_id, term)
+        print(f"Queued scrape job {job_id} for term: {term}")
     
     return {"message": f"Queued {len(search_terms)} scraping jobs from file.", "job_ids": list(scrape_jobs.keys())}
 
