@@ -50,17 +50,15 @@ async def get_youtube_channel_urls(query: str, num_channels: int = 100):
             if query == "random":
                 # For random, we'll just browse YouTube's homepage or trending
                 print("Navigating to YouTube homepage for random channels...")
-                await page.goto("https://www.youtube.com/", wait_until="domcontentloaded", timeout=60000) # 60 sec timeout
-                await asyncio.sleep(5) # Give extra time for dynamic content to load
+                await page.goto("https://www.youtube.com/", wait_until="networkidle", timeout=90000) # Increased timeout
+                await asyncio.sleep(5) # Initial wait for dynamic content
                 print("Page loaded. Attempting to scroll and find channels.")
-                print("Page HTML content (random):")
-                print(await page.content())
                 
                 # Scroll down multiple times to load more content and find diverse channels
-                for i in range(5): # Reduced scrolls for faster testing
+                for i in range(10): # Increased scrolls
                     print(f"Scrolling down (random) - iteration {i+1}...")
                     await page.evaluate("window.scrollBy(0, window.innerHeight);")
-                    await asyncio.sleep(2) # Give time for content to load
+                    await asyncio.sleep(random.uniform(2, 4)) # Random delay
                     
                     # Try to find channel links on the homepage/trending
                     await page.wait_for_selector("ytd-channel-renderer, ytd-grid-channel-renderer, ytd-video-renderer", timeout=10000) # Wait for channel elements to appear
@@ -86,11 +84,9 @@ async def get_youtube_channel_urls(query: str, num_channels: int = 100):
             else:
                 search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}&sp=EgIQAg%253D%253D" # Filter for channels
                 print(f"Navigating to search results: {search_url}")
-                await page.goto(search_url, wait_until="domcontentloaded", timeout=60000) # 60 sec timeout
-                await asyncio.sleep(5) # Give extra time for dynamic content to load
+                await page.goto(search_url, wait_until="networkidle", timeout=90000) # Increased timeout
+                await asyncio.sleep(5) # Initial wait for dynamic content
                 print("Search results page loaded.")
-                print("Page HTML content (search):")
-                print(await page.content())
 
                 # Scroll down to load more channels
                 while len(urls) < num_channels:
