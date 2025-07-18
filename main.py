@@ -57,7 +57,7 @@ async def get_youtube_channel_urls(query: str, num_channels: int = 100):
                 # Scroll down multiple times to load more content and find diverse channels
                 for i in range(10): # Increased scrolls
                     print(f"Scrolling down (random) - iteration {i+1}...")
-                    await page.evaluate("window.scrollBy(0, window.innerHeight);")
+                    await page.keyboard.press('End') # Simulate pressing End key for scrolling
                     await asyncio.sleep(random.uniform(2, 4)) # Random delay
                     
                     # Try to find channel links on the homepage/trending
@@ -91,23 +91,34 @@ async def get_youtube_channel_urls(query: str, num_channels: int = 100):
                 # Scroll down to load more channels
                 while len(urls) < num_channels:
                     print(f"Collected {len(urls)} channels. Scrolling for more...")
-                    # Find channel links on the current page
-                    await page.wait_for_selector("ytd-channel-renderer, ytd-grid-channel-renderer, ytd-video-renderer", timeout=10000) # Wait for channel elements to appear
-                    channel_elements = await page.query_selector_all("ytd-channel-renderer a[href*=\"/channel/\"], ytd-channel-renderer a[href*=\"/@\"]")
-                    if not channel_elements:
-                        # Fallback for video results that might contain channel links
-                        channel_elements = await page.query_selector_all("ytd-video-renderer a[href*=\"/channel/\"], ytd-video-renderer a[href*=\"/@\"]")
-                    print(f"Found {len(channel_elements)} potential channel elements on search page.")
-                    for element in channel_elements:
-                        href = await element.get_attribute("href")
-                        print(f"  - Found potential href: {href}") # Added for debugging
-                        if href and ("/channel/" in href or "/@" in href):
-                            full_url = "https://www.youtube.com" + href.split("?")[0]
-                            if full_url not in urls:
-                                urls.add(full_url)
-                                print(f"Added search channel: {full_url}. Total: {len(urls)}")
+                    old_urls_count = len(urls)
+                    await page.keyboard.press('End') # Simulate pressing End key for scrolling
+                    await asyncio.sleep(random.uniform(3, 5)) # Random delay after scroll
+
+                    # Wait for new content to load by checking if the number of URLs increases
+                    start_time = time.time()
+                    while len(urls) == old_urls_count and (time.time() - start_time) < 15: # Wait up to 15 seconds for new URLs
+                        await page.wait_for_selector("ytd-channel-renderer, ytd-grid-channel-renderer, ytd-video-renderer", timeout=10000) # Wait for channel elements to appear
+                        channel_elements = await page.query_selector_all("ytd-channel-renderer a[href*=\"/channel/\"], ytd-channel-renderer a[href*=\"/@\"]")
+                        if not channel_elements:
+                            channel_elements = await page.query_selector_all("ytd-video-renderer a[href*=\"/channel/\"], ytd-video-renderer a[href*=\"/@\"]")
+                        
+                        for element in channel_elements:
+                            href = await element.get_attribute("href")
+                            if href and ("/channel/" in href or "/@" in href):
+                                full_url = "https://www.youtube.com" + href.split("?")[0]
+                                if full_url not in urls:
+                                    urls.add(full_url)
+                                    print(f"Added search channel: {full_url}. Total: {len(urls)}")
+                        
+                        if len(urls) == old_urls_count:
+                            await asyncio.sleep(1) # Wait a bit before re-checking
+                        else:
+                            print(f"New URLs found after scrolling. Total: {len(urls)}")
+                            break # New URLs found, break inner loop
                     
-                    if len(urls) >= num_channels:
+                    if len(urls) == old_urls_count: # If no new URLs after waiting, we might have hit the end
+                        print("No new URLs found after scrolling and waiting. Assuming end of results.")
                         break
 
                     # Scroll to the bottom of the page
