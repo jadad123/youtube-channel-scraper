@@ -39,7 +39,7 @@ class ScrapeRequest(BaseModel):
 scrape_jobs = {} # {job_id: {"status": "running/completed/failed", "file": "filename.txt"}}
 
 # --- Helper Functions ---
-async def get_youtube_channel_urls(query: str, num_channels: int = 1000):
+async def get_youtube_channel_urls(query: str, num_channels: int = 100):
     urls = set()
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
