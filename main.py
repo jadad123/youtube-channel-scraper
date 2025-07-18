@@ -60,7 +60,7 @@ async def get_youtube_channel_urls(query: str, num_channels: int = 1000):
                     await asyncio.sleep(2) # Give time for content to load
                     
                     # Try to find channel links on the homepage/trending
-                    channel_elements = await page.query_selector_all("ytd-channel-renderer a#main-link, ytd-grid-channel-renderer a#main-link, a#channel-info, #channel-info a")
+                    channel_elements = await page.query_selector_all("a[href*=\"/channel/\"], a[href*=\"/@\"]")
                     print(f"Found {len(channel_elements)} potential channel elements on random page.")
                     for element in channel_elements:
                         href = await element.get_attribute("href")
@@ -86,7 +86,7 @@ async def get_youtube_channel_urls(query: str, num_channels: int = 1000):
                 while len(urls) < num_channels:
                     print(f"Collected {len(urls)} channels. Scrolling for more...")
                     # Find channel links on the current page
-                    channel_elements = await page.query_selector_all("ytd-channel-renderer a#main-link, ytd-grid-channel-renderer a#main-link, a#channel-info, #channel-info a")
+                    channel_elements = await page.query_selector_all("a[href*=\"/channel/\"], a[href*=\"/@\"]")
                     print(f"Found {len(channel_elements)} potential channel elements on search page.")
                     for element in channel_elements:
                         href = await element.get_attribute("href")
