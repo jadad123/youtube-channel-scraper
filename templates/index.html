@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Channel Scraper</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+        input[type="text"] { width: calc(100% - 100px); padding: 8px; margin-right: 10px; }
+        button { padding: 8px 15px; cursor: pointer; }
+        #status { margin-top: 20px; padding: 10px; background-color: #e9e9e9; border-radius: 4px; }
+        #download-links { margin-top: 20px; }
+        .download-item { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YouTube Channel Scraper</h1>
+
+        <div>
+            <input type="text" id="search-query" placeholder="Enter search query (e.g., 'python tutorials')">
+            <button onclick="startScrape('query')">Start Search</button>
+            <button onclick="startScrape('random')">Start Random</button>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h2>Scrape from File:</h2>
+            <input type="file" id="upload-file" accept=".txt">
+            <button onclick="uploadAndScrape()">Upload & Scrape</button>
+        </div>
+
+        <div id="status">
+            <h2>Status:</h2>
+            <p id="current-status">Idle</p>
+        </div>
+
+        <div id="download-links">
+            <h2>Generated Files:</h2>
+            <ul id="file-list">
+                <!-- Download links will be inserted here by JavaScript -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function startScrape(type) {
+            const queryInput = document.getElementById('search-query');
+            const query = queryInput.value.trim();
+            const statusElement = document.getElementById('current-status');
+
+            let url = '/scrape';
+            let body = {};
+
+            if (type === 'query') {
+                if (!query) {
+                    alert('Please enter a search query.');
+                    return;
+                }
+                body = { query: query };
+            } else if (type === 'random') {
+                body = { query: 'random' }; // A placeholder to indicate random
+            }
+
+            statusElement.textContent = `Starting scrape for ${type === 'query' ? 'query: "' + query + '"' : 'random channels'}...`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    statusElement.textContent = data.message;
+                    // Optionally, you can poll for updates or rely on manual refresh for now
+                } else {
+                    statusElement.textContent = `Error: ${data.detail || data.message}`;
+                }
+            } catch (error) {
+                statusElement.textContent = `Network error: ${error.message}`;
+            }
+        }
+
+        async function fetchFiles() {
+            const fileListElement = document.getElementById('file-list');
+            fileListElement.innerHTML = ''; // Clear existing list
+
+            try {
+                const response = await fetch('/files');
+                const files = await response.json();
+
+                if (files.length === 0) {
+                    fileListElement.innerHTML = '<li>No files generated yet.</li>';
+                    return;
+                }
+
+                files.forEach(file => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'download-item';
+                    const link = document.createElement('a');
+                    link.href = `/download/${file}`;
+                    link.textContent = file;
+                    link.download = file; // Suggests the filename for download
+                    listItem.appendChild(link);
+                    fileListElement.appendChild(listItem);
+                });
+            } catch (error) {
+                fileListElement.innerHTML = `<li>Error loading files: ${error.message}</li>`;
+            }
+        }
+
+        // Fetch files on page load and every few seconds
+        document.addEventListener('DOMContentLoaded', fetchFiles);
+        setInterval(fetchFiles, 5000); // Refresh file list every 5 seconds
+
+        async function uploadAndScrape() {
+            const fileInput = document.getElementById('upload-file');
+            const statusElement = document.getElementById('current-status');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a file to upload.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            statusElement.textContent = `Uploading and starting scrape for terms from ${file.name}...`;
+
+            try {
+                const response = await fetch('/upload-and-scrape', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    statusElement.textContent = data.message;
+                } else {
+                    statusElement.textContent = `Error: ${data.detail || data.message}`;
+                }
+            } catch (error) {
+                statusElement.textContent = `Network error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
