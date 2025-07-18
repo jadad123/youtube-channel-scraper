@@ -39,9 +39,10 @@ class ScrapeRequest(BaseModel):
 # In a production environment, this should be persisted (e.g., in a database)
 # as the app might restart. For this simple use case, in-memory is fine.
 scrape_jobs = {} # {job_id: {"status": "running/completed/failed", "file": "filename.txt"}}
+stop_signals = {} # {job_id: True/False}
 
 # --- Helper Functions ---
-async def get_youtube_channel_urls(query: str, num_channels: int = 1000):
+async def get_youtube_channel_urls(job_id: str, query: str, num_channels: int = 1000):
     urls = set()
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True, args=["--no-sandbox"])
@@ -155,7 +156,7 @@ async def perform_scrape_task(job_id: str, query: str):
         print(f"Starting scrape job {job_id} for query: '{query}'")
         scrape_jobs[job_id]["status"] = "running"
         
-        channel_urls = await get_youtube_channel_urls(query)
+        channel_urls = await get_youtube_channel_urls(job_id, query) # Pass job_id to get_youtube_channel_urls
         
         if not channel_urls:
             scrape_jobs[job_id]["status"] = "failed"
@@ -179,6 +180,10 @@ async def perform_scrape_task(job_id: str, query: str):
     except Exception as e:
         scrape_jobs[job_id]["status"] = "failed"
         print(f"Scrape job {job_id} failed due to an exception: {e}")
+    finally:
+        # Clean up stop signal after job is done or failed
+        if job_id in stop_signals:
+            del stop_signals[job_id]
 
 # --- Routes ---
 @app.get("/", response_class=HTMLResponse)
@@ -212,6 +217,16 @@ async def upload_and_scrape(background_tasks: BackgroundTasks, file: UploadFile 
         print(f"Queued scrape job {job_id} for term: {term}")
     
     return {"message": f"Queued {len(search_terms)} scraping jobs from file.", "job_ids": list(scrape_jobs.keys())}
+
+@app.post("/stop-scrape")
+async def stop_scrape_request():
+    # This will signal all currently running jobs to stop. 
+    # In a more complex app, you might want to stop a specific job_id.
+    for job_id in scrape_jobs:
+        if scrape_jobs[job_id]["status"] == "running":
+            stop_signals[job_id] = True
+            print(f"Stop signal sent for job {job_id}")
+    return {"message": "Stop signal sent to all running scrape jobs."}
 
 @app.get("/files")
 async def list_files():
